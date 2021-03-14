@@ -10,6 +10,7 @@ import {
     ListItem, Typography
 } from "@material-ui/core";
 import {Skeleton} from "@material-ui/lab";
+import {useHistory} from "react-router-dom";
 
 
 const QuizContainer = ({
@@ -21,15 +22,17 @@ const QuizContainer = ({
                            currentIndex,
                            onSelectAnswer,
                            myAnswers,
-                           onCheckAnswer
+                           onCheckAnswer,
+                           options,
+                           forseUpdate
                        }) => {
 
     const [modalIsOpen, setModalIsOpen] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
-
     useEffect(() => {
-        if (isLoading)
-            fetch('https://opentdb.com/api.php?amount=20&category=18&difficulty=easy&type=multiple', {method: 'get'})
+
+        if (isLoading && options)
+            fetch('https://opentdb.com/api.php?amount=' + options.amount + (options.category ? '&category=' + options.category : '') + (options.difficulty ? '&difficulty=' + options.difficulty : '') + '&type=multiple', {method: 'get'})
                 .then(res => res.json())
                 .then(data => onFetch(data))
     })
@@ -40,33 +43,14 @@ const QuizContainer = ({
         setIsFinished(true)
     }
 
-    const buttons = []
-    for (let i = 0; i < countQuizzes; i++) {
-        let className = ''
-        if (i === currentIndex) {
-            className = 'current-btn'
-        } else if (myAnswers[i].isSubmitted) {
-            className = myAnswers[i].isCorrect ? 'correct-btn' : 'incorrect-btn'
-        } else if (myAnswers[i].answerIndex !== -1) {
-            className = 'selected-btn'
-        }
-        buttons.push(
-            <Button className={className + " rounded-0"}
-                    disabled={i === currentIndex}
-                    onClick={() => onSelectQuiz(i)}
-                    key={i}
-                    variant="outlined">{i + 1}</Button>)
-    }
-
-
     return (
         <div className="col-md-6 offset-md-3">
             {!isLoading ?
-                <div>
+                <form onSubmit={(e) => e.preventDefault()}>
                     <div className="container-fluid px-0 py-3 flex-wrap d-flex justify-content-center">
-                        {buttons.map(button => (
-                            button
-                        ))}
+                        <RenderButtons onSelectQuiz={onSelectQuiz}
+                                       currentIndex={currentIndex}
+                                       myAnswers={myAnswers}/>
                     </div>
                     <div className="card">
                         <div className="card-header">
@@ -118,9 +102,9 @@ const QuizContainer = ({
                             </Button>
                         </div>
                     </div>
-                </div> :
+                    {/*Quiz*/}
+                </form> :
                 <div>
-
                     <div>
                         <Skeleton height={70} animation={"wave"}/>
                     </div>
@@ -142,39 +126,47 @@ const QuizContainer = ({
                         </div>
                     </div>
 
-                </div>
+                </div> // Sceleton
             }
 
             <MyDialog open={modalIsOpen}
                       countQuizzes={countQuizzes}
+                      forseUpdate={forseUpdate}
                       countCorrectAnswers={countCorrectAnswers}
                       toggle={() => setModalIsOpen(false)}/>
         </div>
     );
 }
 
-const MyDialog = ({open, toggle, countQuizzes, countCorrectAnswers}) => {
-
+const MyDialog = ({open, toggle, countQuizzes, countCorrectAnswers, forseUpdate}) => {
+    let history = useHistory()
     return (
-        <Dialog
-            open={open}
-            maxWidth={"sm"}
-            fullWidth={true}
-            onClose={toggle}
-            aria-labelledby="alert-dialog-title"
-            aria-describedby="alert-dialog-description"
-        >
+        <Dialog open={open}
+                maxWidth={"sm"}
+                fullWidth={true}
+                onClose={toggle}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description">
             <DialogTitle id="alert-dialog-title">{"Your results"}</DialogTitle>
             <DialogContent>
                 <DialogContentText id="alert-dialog-description">
                     <Typography variant="h4" className="text-center">{countCorrectAnswers} / {countQuizzes}</Typography>
                     <Typography variant="h5" className="text-center">or</Typography>
-                    <Typography variant="h4" className="text-center">{Math.round(countCorrectAnswers/countQuizzes*100)} %</Typography>
+                    <Typography variant="h4"
+                                className="text-center">
+                        {Math.round(countCorrectAnswers / countQuizzes * 100)} %
+                    </Typography>
                 </DialogContentText>
             </DialogContent>
-            <DialogActions>
-                <Button onClick={toggle} className="w-100" variant={"outlined"} color="primary" autoFocus>
+            <DialogActions className="d-flex">
+                <Button className="col" onClick={toggle} variant={"outlined"} color="primary" autoFocus>
                     Ok
+                </Button>
+                <Button className="col" onClick={() => {
+                    history.push('/')
+                    forseUpdate()
+                }} variant={"outlined"} color="secondary" autoFocus>
+                    Go Home
                 </Button>
             </DialogActions>
         </Dialog>
@@ -190,7 +182,25 @@ function calculateCorrectAnswer(answers = []) {
             return -1;
         }
     }
-    return answers.length?counter:-1;
+    return answers.length ? counter : -1;
+}
+
+const RenderButtons = ({currentIndex, myAnswers, onSelectQuiz}) => {
+    return myAnswers.map((answer, i) => {
+        let className = ''
+        if (i === currentIndex) {
+            className = 'current-btn'
+        } else if (answer.isSubmitted) {
+            className = myAnswers[i].isCorrect ? 'correct-btn' : 'incorrect-btn'
+        } else if (answer.answerIndex !== -1) {
+            className = 'selected-btn'
+        }
+        return <Button className={className + " rounded-0"}
+                       disabled={i === currentIndex}
+                       onClick={() => onSelectQuiz(i)}
+                       key={i}
+                       variant="outlined">{i + 1}</Button>
+    })
 }
 
 

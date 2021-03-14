@@ -1,7 +1,9 @@
 import './App.css';
 import QuizContainer from "./components/QuizContainer";
 import {Component} from "react";
-import QuizContainerHeader from "./components/QuizContainerHeader";
+import Header from "./components/Header";
+import {BrowserRouter,Switch,Route} from "react-router-dom";
+import Home from "./components/Home";
 
 class App extends Component {
 
@@ -11,8 +13,10 @@ class App extends Component {
             quizzes: [],
             isLoading: true,
             selectedQuizId: 0,
-            myAnswers: []
+            myAnswers: [],
+            options:{difficulty: '', category: '', amount: 10}
         }
+        console.log(this.props)
     }
 
     setSelectedQuiz = (id) => {
@@ -20,24 +24,32 @@ class App extends Component {
             selectedQuizId: id
         })
     }
+
+    setOptions = (options) => {
+        this.setState({
+            options,
+            isLoading:true
+        })
+    }
+
     onCheckAnswer = () => {
-        const {myAnswers,quizzes,selectedQuizId} = this.state
-        const correctIndex=quizzes[selectedQuizId].variants.findIndex(variant=>variant===quizzes[selectedQuizId].correct_answer)
-        myAnswers[selectedQuizId].isSubmitted=true
-        myAnswers[selectedQuizId].correctIndex=correctIndex
-        myAnswers[selectedQuizId].isCorrect=myAnswers[selectedQuizId].answerIndex === correctIndex
+        const {myAnswers, quizzes, selectedQuizId} = this.state
+        const correctIndex = quizzes[selectedQuizId].variants.findIndex(variant => variant === quizzes[selectedQuizId].correct_answer)
+        myAnswers[selectedQuizId].isSubmitted = true
+        myAnswers[selectedQuizId].correctIndex = correctIndex
+        myAnswers[selectedQuizId].isCorrect = myAnswers[selectedQuizId].answerIndex === correctIndex
         this.setState({
             myAnswers
         })
     }
     onQuizEnd = () => {
-        const {myAnswers,quizzes} = this.state
+        const {myAnswers, quizzes} = this.state
         for (let i = 0; i < quizzes.length; i++) {
-            if (!myAnswers[i].isSubmitted){
-                const correctIndex=quizzes[i].variants.findIndex(variant=>variant===quizzes[i].correct_answer)
-                myAnswers[i].isSubmitted=true
-                myAnswers[i].correctIndex=correctIndex
-                myAnswers[i].isCorrect=myAnswers[i].answerIndex === correctIndex
+            if (!myAnswers[i].isSubmitted) {
+                const correctIndex = quizzes[i].variants.findIndex(variant => variant === quizzes[i].correct_answer)
+                myAnswers[i].isSubmitted = true
+                myAnswers[i].correctIndex = correctIndex
+                myAnswers[i].isCorrect = myAnswers[i].answerIndex === correctIndex
             }
         }
         this.setState({
@@ -60,7 +72,7 @@ class App extends Component {
             quizzes[i].variants = [...quizzes[i].incorrect_answers, quizzes[i].correct_answer]
             this.shuffleArray(quizzes[i].variants)
             delete quizzes[i].incorrect_answers
-            myAnswers[i]={
+            myAnswers[i] = {
                 isSubmitted: false,
                 isCorrect: false,
                 answerIndex: -1
@@ -70,27 +82,46 @@ class App extends Component {
             quizzes,
             isLoading: false,
             selectedQuizId: 0,
-            myAnswers
+            myAnswers,
         })
     }
 
     render() {
-        const {quizzes, isLoading, selectedQuizId, myAnswers} = this.state
+        const {quizzes, isLoading, selectedQuizId, myAnswers, options} = this.state
+
 
         return (
-            <div className="App">
-                <QuizContainerHeader currentIndex={selectedQuizId + 1}
-                                     onFinish={this.onQuizEnd}
-                                     countQuizzes={quizzes.length}/>
-                <QuizContainer isLoading={isLoading}
-                               quiz={quizzes[selectedQuizId]}
-                               currentIndex={selectedQuizId}
-                               myAnswers={myAnswers}
-                               onSelectQuiz={this.setSelectedQuiz}
-                               onSelectAnswer={this.setSelectAnswer}
-                               onCheckAnswer={this.onCheckAnswer}
-                               onFetch={this.setData} countQuizzes={quizzes.length}/>
-            </div>
+            <>
+                <BrowserRouter>
+                    <div className="App">
+                        <Header currentIndex={selectedQuizId + 1}
+                                onFinish={this.onQuizEnd}
+                                forseUpdate={()=>this.forceUpdate()}
+                                countQuizzes={quizzes.length}/>
+                        <Switch>
+                            <Route exact path="/">
+                                <Home options={options}
+                                      isLoading={isLoading}
+                                      forseUpdate={()=>this.forceUpdate()}
+                                      onSubmit={this.setOptions}/>
+                            </Route>
+                            <Route path="/quiz">
+                        <QuizContainer isLoading={isLoading}
+                                       quiz={quizzes[selectedQuizId]}
+                                       currentIndex={selectedQuizId}
+                                       myAnswers={myAnswers}
+                                       options={options}
+                                       forseUpdate={()=>this.forceUpdate()}
+                                       onSelectQuiz={this.setSelectedQuiz}
+                                       onSelectAnswer={this.setSelectAnswer}
+                                       onCheckAnswer={this.onCheckAnswer}
+                                       onFetch={this.setData} countQuizzes={quizzes.length}/>
+
+                            </Route>
+                        </Switch>
+                    </div>
+                </BrowserRouter>
+            </>
         );
     }
 
